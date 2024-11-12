@@ -318,6 +318,12 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                     actions: [
                       TextButton(
                         onPressed: (){
+                          Navigator.pop(context);
+                        },
+                        child: Text('Cancel', style: TextStyle(color: Colors.red),),
+                      ),
+                      TextButton(
+                        onPressed: (){
                           if(secondsController.text != '' && player1Controller.text !=''
                               && player2Controller.text!='') {
                             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -356,7 +362,10 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                             });
                           }
                         },
-                        child: Text('Submit'),
+                        style: ButtonStyle(
+                          backgroundColor: WidgetStateProperty.all(Colors.green[50])
+                        ),
+                        child: Text('Submit',style: TextStyle(color: Colors.green)),
                       ),
                     ],
                   ));
@@ -423,10 +432,13 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                 },
                 child: Container(
                   alignment: Alignment.center,
-                  height: 50,
+                  height: 70,
                   width: MediaQuery.sizeOf(context).width,
                   child: Text('Start Game'),
-                  color: Colors.red,
+                  decoration: BoxDecoration(
+                  color: Colors.blueGrey,
+                    borderRadius: BorderRadius.circular(20)
+                  ),
                 ),
               ),
             ),
