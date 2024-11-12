@@ -183,15 +183,15 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
     player1Controller.text = player1.toString();
     player2Controller.text = player2.toString();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (hasFourInARow(grid)) {
-        isGameOver = true;
-        _showDialog(false);
-      }
-      else{
-        // timerController.start();
-      }
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   if (hasFourInARow(grid)) {
+    //     isGameOver = true;
+    //     _showDialog(false);
+    //   }
+    //   else{
+    //     // timerController.start();
+    //   }
+    // });
     // timerController.start();
     print('in build');
     return Scaffold(
@@ -228,8 +228,12 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
 
             IconButton(onPressed: (){
               timerController.stop();
+                        final TextEditingController secondsController = TextEditingController();
+                        final TextEditingController player1Controller = TextEditingController();
+                        final TextEditingController player2Controller = TextEditingController();
               showDialog(
                   context: context,
+                  barrierDismissible: false,
                   builder: (context)=>AlertDialog(
                     title: Text('Settings'),
                     content: StatefulBuilder(
@@ -289,9 +293,6 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                                     labelText: "Player 1 Name",
                                     border: OutlineInputBorder(),
                                   ),
-                                  onChanged: (value) {
-                                    print(value);
-                                  },
                                 ),
                               ),
 
@@ -306,9 +307,6 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                                     labelText: "Player 2 Name",
                                     border: OutlineInputBorder(),
                                   ),
-                                  onChanged: (value) {
-                                    print(value);
-                                  },
                                 ),
                               ),
                             ],
@@ -320,26 +318,43 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                     actions: [
                       TextButton(
                         onPressed: (){
-                          setState(() {
-                            timerValue = int.parse(secondsController.text.toString());
-                            player1 = player1Controller.text;
-                            player2 = player2Controller.text;
-                            // gameStarted = false;
-                            key = UniqueKey();
+                          if(secondsController.text != '' && player1Controller.text !=''
+                              && player2Controller.text!='') {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
 
-                            grid = List.generate(
-                              4,
-                                  (i) => List.generate(4, (j) => 0),
-                            );
-                            isFirst = true;
-                            flag = false;
-                            gameStarted = false;
-                            timerController.reset();
-                            timerController.stop();
-                            isGameOver = false;
+                              setState(() {
+                                timerValue = int.parse(
+                                    secondsController.text.toString());
+                                player1 = player1Controller.text;
+                                player2 = player2Controller.text;
+                                // gameStarted = false;
+                                key = UniqueKey();
 
-                          });
-                          Navigator.pop(context);
+                                grid = List.generate(
+                                  4,
+                                      (i) => List.generate(4, (j) => 0),
+                                );
+                                isFirst = true;
+                                flag = false;
+                                gameStarted = false;
+                                timerController.reset();
+                                timerController.stop();
+                                isGameOver = false;
+                              });
+                            });
+                            Navigator.pop(context);
+                          }
+                          else{
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Please enter all the details'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+
+                            });
+                          }
                         },
                         child: Text('Submit'),
                       ),
