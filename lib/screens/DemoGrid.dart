@@ -73,7 +73,17 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
   bool gameStarted = false;
   bool timerRunning = true;
   bool isLoading = false;
+  bool isGameOver = false;
   late LinearTimerController timerController = LinearTimerController(this);
+
+  bool isTimerEnabled = true;
+  int timerValue = 30;
+  String player1 = 'Player 1';
+  String player2 = 'Player 2';
+  final TextEditingController secondsController = TextEditingController();
+  final TextEditingController player1Controller = TextEditingController();
+  final TextEditingController player2Controller = TextEditingController();
+  Key key = UniqueKey();
   bool hasFourInARow(List<List<int>> grid) {
     int rows = 4; // fixed 4x4 grid
     int cols = 4;
@@ -130,11 +140,12 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
     return false;
   }
 
-  void _showDialog(){
+  void _showDialog(bool isTimeout){
+    timerController.stop();
     showDialog(
         context: context,
         builder: (context)=>AlertDialog(
-          title: Text('Player ${isFirst ? '2' : '1'} Won'),
+          title: Text('${isFirst ? player2 : player1} Won ${isTimeout? 'by Timeout' : ''}'),
           content: Text('Do you really want Restart the GAME'),
           actions: [
             TextButton(
@@ -146,10 +157,11 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                 isFirst = true;
                 flag = false;
                 Navigator.of(context).pop();
-                gameStarted = true;
+                gameStarted = false;
                 timerController.reset();
                 setState(() {
-
+                  timerController.stop();
+                  isGameOver = false;
                 });
               },
               child: Text('Yes'),
@@ -167,10 +179,14 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final orientation = MediaQuery.of(context).orientation;
+    secondsController.text = timerValue.toString();
+    player1Controller.text = player1.toString();
+    player2Controller.text = player2.toString();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (hasFourInARow(grid)) {
-        _showDialog();
+        isGameOver = true;
+        _showDialog(false);
       }
       else{
         // timerController.start();
@@ -181,15 +197,19 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
     return Scaffold(
       body: SafeArea(
         child: Container(
+          height: MediaQuery.sizeOf(context).height,
+          width: MediaQuery.sizeOf(context).width,
           decoration: BoxDecoration(
             image: DecorationImage(
               image: AssetImage("assets/back.jpg"), // Background image
               fit: BoxFit.fill, // Cover the entire screen
             ),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: orientation == Orientation.landscape ? tabView() : mobileView(),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: orientation == Orientation.landscape ? tabView() : mobileView(),
+            ),
           ),
         ),
       ),
@@ -198,29 +218,177 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
 
   mobileView(){
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+
+            IconButton(onPressed: (){
+              timerController.stop();
+              showDialog(
+                  context: context,
+                  builder: (context)=>AlertDialog(
+                    title: Text('Settings'),
+                    content: StatefulBuilder(
+                      builder: (BuildContext context, StateSetter  setState) {
+                        return Container(
+                          height: 220,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Timer'),
+                                  Switch(
+                                      value: isTimerEnabled,
+                                      onChanged: (s){
+                                        print(s);
+                                        setState(() {
+                                          isTimerEnabled = s;
+                                        });
+                                      })
+                                ],
+                              ),
+
+                              if(isTimerEnabled)...[
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Container(
+                                      height: 40,
+                                      width: 150,
+                                      child: TextField(
+                                        controller: secondsController,
+                                        keyboardType: TextInputType.number,
+                                        decoration: InputDecoration(
+                                          labelText: "Enter seconds",
+                                          border: OutlineInputBorder(),
+                                        ),
+                                        onChanged: (value) {
+                                          print(value);
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                SizedBox(height: 30,),
+                              ],
+
+                              Container(
+                                height: 40,
+                                // width: 150,
+                                child: TextField(
+                                  controller: player1Controller,
+                                  // keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    labelText: "Player 1 Name",
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  onChanged: (value) {
+                                    print(value);
+                                  },
+                                ),
+                              ),
+
+                              SizedBox(height: 20,),
+                              Container(
+                                height: 40,
+                                // width: 150,
+                                child: TextField(
+                                  controller: player2Controller,
+                                  // keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    labelText: "Player 2 Name",
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  onChanged: (value) {
+                                    print(value);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: (){
+                          setState(() {
+                            timerValue = int.parse(secondsController.text.toString());
+                            player1 = player1Controller.text;
+                            player2 = player2Controller.text;
+                            // gameStarted = false;
+                            key = UniqueKey();
+
+                            grid = List.generate(
+                              4,
+                                  (i) => List.generate(4, (j) => 0),
+                            );
+                            isFirst = true;
+                            flag = false;
+                            gameStarted = false;
+                            timerController.reset();
+                            timerController.stop();
+                            isGameOver = false;
+
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: Text('Submit'),
+                      ),
+                    ],
+                  ));
+            },
+                icon: Icon(Icons.settings,size: 30,color: Colors.blue,)),
+
+            IconButton(onPressed: (){
+              showDialog(
+                  context: context,
+                  builder: (context)=>AlertDialog(
+                    title: Text(''),
+                    content: Text('Do you really want Restart the GAME'),
+                    actions: [
+                      TextButton(
+                        onPressed: (){
+                          Navigator.pop(context);
+                        },
+                        child: Text('Thanks!!'),
+                      ),
+                    ],
+                  ));
+            },
+                icon: Icon(Icons.help,size: 30,color: Colors.red,)),
+          ],
+        ),
 
         Text('Moving Marble Game',
           style: TextStyle(fontSize: 25),),
 
         SizedBox(height: 20,),
 
-        Text('${isFirst? 'Player 1' : 'Player 2'}\'s Turn',
+        Text('${isFirst? player1 : player2}\'s Turn',
           style: TextStyle(fontSize: 18),),
 
         SizedBox(height: 20,),
         LinearTimer(
-          duration: const Duration(seconds: 10),
+          key: key,
+          duration: Duration(seconds: timerValue),
           controller: timerController,
           onTimerEnd: () {
             setState(() {
-              _showDialog();
+              isGameOver = true;
+              _showDialog(true);
             });
           },
           minHeight: 8,
-          color: isFirst ? Colors.red : Colors.yellow,
+          color: isLoading ? Colors.white : !isFirst ? Colors.red : Colors.yellow,
         ),
 
         SizedBox(height: 40,),
@@ -282,8 +450,14 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
               4,
                   (i) => List.generate(4, (j) => 0),
             );
+            isFirst = true;
+            isLoading = false;
+            flag = false;
             setState(() {
-              timerController.start();
+              timerController.reset();
+              timerController.stop();
+              isGameOver = false;
+              gameStarted = false;
             });
           },
           child: Text('Reset Game'),
@@ -309,7 +483,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
 
               SizedBox(height: 20,),
 
-              Text('${isFirst? 'Player 1' : 'Player 2'}\'s Turn',
+              Text('${isFirst? player1 : player2}\'s Turn',
                 style: TextStyle(fontSize: 18),),
 
               SizedBox(height: 20,),
@@ -320,11 +494,12 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                   controller: timerController,
                   onTimerEnd: () {
                     setState(() {
-                      _showDialog();
+                      isGameOver = true;
+                      _showDialog(true);
                     });
                   },
                   minHeight: 8,
-                  color: isFirst ? Colors.red : Colors.yellow,
+                  color: isLoading ? Colors.white : !isFirst ? Colors.red : Colors.yellow,
                 ),
               ),
 
@@ -336,8 +511,14 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                     4,
                         (i) => List.generate(4, (j) => 0),
                   );
+                  isFirst = true;
+                  isLoading = false;
+                  flag = false;
+                  gameStarted = false;
                   setState(() {
-                    timerController.start();
+                    timerController.reset();
+                    timerController.stop();
+                    isGameOver = false;
                   });
                 },
                 child: Text('Reset Game'),
@@ -439,27 +620,26 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
             margin: EdgeInsets.zero,
             child: InkWell(
               onTap: ()async{
-                grid[row][col] = isFirst ? 1 : 2;
-                timerController.stop();
-
-
-                isFirst = !isFirst;
-                flag  = hasFourInARow(grid);
-                if(flag){
-                  setState(() {});
-                  _showDialog();
-                }
-                else {
-                  setState(() {
-
-                  });
-                  // isLoading = true;
-                  _showImageWithBlur();
+                if(!isGameOver && grid[row][col]==0) {
+                  grid[row][col] = isFirst ? 1 : 2;
                   timerController.stop();
-                  await Future.delayed(Duration(milliseconds: 1200));
-                  rotateGrid();
-                  timerController.reset();
-                  timerController.start();
+
+                  isFirst = !isFirst;
+                  flag = hasFourInARow(grid);
+                  if (flag) {
+                    setState(() {});
+                    isGameOver = true;
+                    _showDialog(false);
+                  } else {
+                    setState(() {});
+                    // isLoading = true;
+                    _showImageWithBlur();
+                    timerController.stop();
+                    await Future.delayed(Duration(milliseconds: 1200));
+                    rotateGrid();
+                    timerController.reset();
+                    timerController.start();
+                  }
                 }
               },
               child: AnimatedContainer(
