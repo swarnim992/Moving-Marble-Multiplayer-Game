@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:linear_timer/linear_timer.dart';
 
 
 class GridRotation extends StatefulWidget {
@@ -6,11 +10,10 @@ class GridRotation extends StatefulWidget {
   _GridRotationState createState() => _GridRotationState();
 }
 
-class _GridRotationState extends State<GridRotation> {
+class _GridRotationState extends State<GridRotation> with TickerProviderStateMixin{
   // Initialize the grid with values
   List<List<int>> grid = List.generate(
-    4,
-        (i) => List.generate(4, (j) => 0),
+    4, (i) => List.generate(4, (j) => 0),
   );
 
   // Function to rotate the grid clockwise
@@ -67,6 +70,10 @@ class _GridRotationState extends State<GridRotation> {
   }
   bool isFirst = true;
   bool flag = false;
+  bool gameStarted = false;
+  bool timerRunning = true;
+  bool isLoading = false;
+  late LinearTimerController timerController = LinearTimerController(this);
   bool hasFourInARow(List<List<int>> grid) {
     int rows = 4; // fixed 4x4 grid
     int cols = 4;
@@ -123,95 +130,152 @@ class _GridRotationState extends State<GridRotation> {
     return false;
   }
 
+  void _showDialog(){
+    showDialog(
+        context: context,
+        builder: (context)=>AlertDialog(
+          title: Text('Player ${isFirst ? '2' : '1'} Won'),
+          content: Text('Do you really want Restart the GAME'),
+          actions: [
+            TextButton(
+              onPressed: (){
+                grid = List.generate(
+                  4,
+                      (i) => List.generate(4, (j) => 0),
+                );
+                isFirst = true;
+                flag = false;
+                Navigator.of(context).pop();
+                gameStarted = true;
+                timerController.reset();
+                setState(() {
+
+                });
+              },
+              child: Text('Yes'),
+            ),
+            TextButton(
+              onPressed: (){
+                Navigator.pop(context);
+              },
+              child: Text('NO'),
+            ),
+          ],
+        ));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final orientation = MediaQuery.of(context).orientation;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (hasFourInARow(grid)) {
+        _showDialog();
+      }
+      else{
+        // timerController.start();
+      }
+    });
+    // timerController.start();
+    print('in build');
+    return Scaffold(
+      body: SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage("assets/back.jpg"), // Background image
+              fit: BoxFit.fill, // Cover the entire screen
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: orientation == Orientation.landscape ? tabView() : mobileView(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  mobileView(){
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // GridView to display 4x4 grid
-        Expanded(
-          child: GridView.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
+
+        Text('Moving Marble Game',
+          style: TextStyle(fontSize: 25),),
+
+        SizedBox(height: 20,),
+
+        Text('${isFirst? 'Player 1' : 'Player 2'}\'s Turn',
+          style: TextStyle(fontSize: 18),),
+
+        SizedBox(height: 20,),
+        LinearTimer(
+          duration: const Duration(seconds: 10),
+          controller: timerController,
+          onTimerEnd: () {
+            setState(() {
+              _showDialog();
+            });
+          },
+          minHeight: 8,
+          color: isFirst ? Colors.red : Colors.yellow,
+        ),
+
+        SizedBox(height: 40,),
+
+        Visibility(
+          visible: gameStarted,
+          replacement: Container(
+            height: 450,
+            width: MediaQuery.sizeOf(context).width,
+            child: Center(
+              child: MaterialButton(
+                onPressed: (){
+                  setState(() {
+                    gameStarted = true;
+                    timerController.start();
+                  });
+                },
+                child: Container(
+                  alignment: Alignment.center,
+                  height: 50,
+                  width: MediaQuery.sizeOf(context).width,
+                  child: Text('Start Game'),
+                  color: Colors.red,
+                ),
+              ),
             ),
-            itemCount: 16,
-            itemBuilder: (context, index) {
-              int row = index ~/ 4;
-              int col = index % 4;
-
-              return Card(
-                // color: Colors.blue,
-                margin: EdgeInsets.all(8),
-                child: InkWell(
-                  onTap: ()async{
-                    grid[row][col] = isFirst ? 1 : 2;
-
-                    isFirst = !isFirst;
-                    flag  = hasFourInARow(grid);
-
-                    if(flag){
-                      setState(() {
-
-                      });
-                      showDialog(context: context,
-                          builder: (context)=>AlertDialog(
-                            title: Text('Player ${isFirst ? 'Player 2' : 'Player 1'} Won'),
-                            content: Text('Do you really want Restart the GAME'),
-                            actions: [
-                              TextButton(
-                                onPressed: (){
-                                  grid = List.generate(
-                                    4,
-                                        (i) => List.generate(4, (j) => 0),
-                                  );
-                                  Navigator.of(context).pop();
-
-                                  setState(() {
-
-                                  });
-                                },
-                                child: Text('Yes'),
-                              ),
-                              TextButton(
-                                onPressed: (){
-                                  Navigator.pop(context);
-                                },
-                                child: Text('NO'),
-                              ),
-                            ],
-                          ))
-                      ;
-                    }
-                    else {
-                      setState(() {
-
-                      });
-                      await Future.delayed(Duration(seconds: 2));
-                      rotateGrid();
-                    }
-                  },
-                  child: AnimatedContainer(
-                    color: grid[row][col] == 0 ?
-                            Colors.blue :
-                              grid[row][col] == 1
-                              ? Colors.red : Colors.yellow,
-                    alignment: Alignment.centerRight,
-                    duration: Duration(milliseconds: 700),
-                    curve: Curves.linearToEaseOut,
-                    child: Center(
-                      child: Text(
-                        '${grid[row][col]}',
-                        style: TextStyle(color: Colors.white),
+          ),
+          child: Container(
+            height: 450,
+            child: isLoading
+                ? Container(
+              height: 450,
+              child: Stack(
+                children: [
+                  marbleGrid(),
+                  Opacity(
+                    opacity: 0.1,
+                    child: Container(
+                      width: MediaQuery.sizeOf(context).width,
+                      height: 400,
+                      child: Image.asset(
+                        'assets/rotate.gif', // Replace with your PNG asset
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
-                ),
-              );
-            },
+
+                ],
+              ),
+            )
+                :marbleGrid(),
           ),
         ),
-        // Button to rotate grid
+
+
         ElevatedButton(
           onPressed: (){
             grid = List.generate(
@@ -219,7 +283,7 @@ class _GridRotationState extends State<GridRotation> {
                   (i) => List.generate(4, (j) => 0),
             );
             setState(() {
-
+              timerController.start();
             });
           },
           child: Text('Reset Game'),
@@ -228,73 +292,221 @@ class _GridRotationState extends State<GridRotation> {
       ],
     );
   }
+
+  tabView(){
+    return Container(
+      height: MediaQuery.sizeOf(context).height,
+      width:  MediaQuery.sizeOf(context).width,
+      child: Row(
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+
+              Text('Moving Marble Game',
+                style: TextStyle(fontSize: 25),),
+
+              SizedBox(height: 20,),
+
+              Text('${isFirst? 'Player 1' : 'Player 2'}\'s Turn',
+                style: TextStyle(fontSize: 18),),
+
+              SizedBox(height: 20,),
+              Container(
+                width: MediaQuery.sizeOf(context).width * 0.4 ,
+                child: LinearTimer(
+                  duration: const Duration(seconds: 10),
+                  controller: timerController,
+                  onTimerEnd: () {
+                    setState(() {
+                      _showDialog();
+                    });
+                  },
+                  minHeight: 8,
+                  color: isFirst ? Colors.red : Colors.yellow,
+                ),
+              ),
+
+              SizedBox(height: 40,),
+
+              ElevatedButton(
+                onPressed: (){
+                  grid = List.generate(
+                    4,
+                        (i) => List.generate(4, (j) => 0),
+                  );
+                  setState(() {
+                    timerController.start();
+                  });
+                },
+                child: Text('Reset Game'),
+              ),
+              SizedBox(height: 20),
+            ],
+          ),
+
+          SizedBox(width: 20,),
+          Visibility(
+            visible: gameStarted,
+            replacement: Container(
+              height: 450,
+              width: MediaQuery.sizeOf(context).width * 0.5,
+              child: Center(
+                child: MaterialButton(
+                  onPressed: (){
+                    setState(() {
+                      gameStarted = true;
+                      timerController.start();
+                    });
+                  },
+                  child: Container(
+                    alignment: Alignment.center,
+                    height: 50,
+                    width: MediaQuery.sizeOf(context).width * 0.5,
+                    child: Text('Start Game'),
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+            ),
+            child: Container(
+              // height: ,
+              child: isLoading
+                  ? Container(
+                // height: 450,
+                child: Stack(
+                  children: [
+                    marbleGrid(),
+                    Opacity(
+                      opacity: 0.1,
+                      child: Container(
+                        width: MediaQuery.sizeOf(context).width * 0.5,
+                        height: 400,
+                        child: Image.asset(
+                          'assets/rotate.gif', // Replace with your PNG asset
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+
+                  ],
+                ),
+              )
+                  :marbleGrid(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  marbleGrid(){
+    SliverGridDelegateWithFixedCrossAxisCount sliverGridDelegateWithFixedCrossAxisCount =
+    SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        crossAxisSpacing: 8.0,
+        mainAxisSpacing: 8.0,
+        mainAxisExtent: MediaQuery.sizeOf(context).height * 0.20
+
+    );
+
+    SliverGridDelegateWithFixedCrossAxisCount sliverGridDelegateWithFixedCrossAxisCount1 =
+    SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+      crossAxisSpacing: 8.0,
+      mainAxisSpacing: 8.0,
+    );
+    return Container(
+      height: MediaQuery.sizeOf(context).height,
+      width: Orientation.landscape == MediaQuery.of(context).orientation ?
+              MediaQuery.sizeOf(context).width * 0.5 :
+              MediaQuery.sizeOf(context).width,
+      child: GridView.builder(
+        padding: EdgeInsets.zero,
+        // physics: NeverScrollableScrollPhysics(),
+        gridDelegate:Orientation.landscape == MediaQuery.of(context).orientation ?
+                    sliverGridDelegateWithFixedCrossAxisCount :
+                    sliverGridDelegateWithFixedCrossAxisCount1,
+        itemCount: 16,
+        itemBuilder: (context, index) {
+          int row = index ~/ 4;
+          int col = index % 4;
+
+          return
+            Card(
+            // color: Colors.blue,
+            margin: EdgeInsets.zero,
+            child: InkWell(
+              onTap: ()async{
+                grid[row][col] = isFirst ? 1 : 2;
+                timerController.stop();
+
+
+                isFirst = !isFirst;
+                flag  = hasFourInARow(grid);
+                if(flag){
+                  setState(() {});
+                  _showDialog();
+                }
+                else {
+                  setState(() {
+
+                  });
+                  // isLoading = true;
+                  _showImageWithBlur();
+                  timerController.stop();
+                  await Future.delayed(Duration(milliseconds: 1200));
+                  rotateGrid();
+                  timerController.reset();
+                  timerController.start();
+                }
+              },
+              child: AnimatedContainer(
+                // color: grid[row][col] == 0 ?
+                // Colors.blue :
+                // grid[row][col] == 1
+                //     ? Colors.red : Colors.yellow,
+                alignment: Alignment.centerRight,
+                duration: Duration(milliseconds: 1000),
+                curve: Curves.linearToEaseOut,
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  image:  grid[row][col] == 0 ? null:
+                  DecorationImage(
+                    image: grid[row][col] == 1
+                        ? AssetImage("assets/player1.png") :
+                    AssetImage("assets/player2.png"), // Background image
+                    fit: BoxFit.fill, // Cover the entire screen
+                  ),
+                    border: Border.all(color: Colors.black)
+
+                ),
+                child: Center(
+                  child: Text(
+                    ' ',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showImageWithBlur() {
+    setState(() {
+      isLoading = true;
+    });
+
+    // Set a timer to hide the image after 2 seconds
+    Timer(Duration(milliseconds: 1200), () {
+      setState(() {
+        isLoading = false;
+      });
+    });
+  }
+
 }
-
-
-// class ColorWipe extends StatefulWidget {
-//   @override
-//   _ColorWipeState createState() => _ColorWipeState();
-// }
-// class _ColorWipeState extends State<ColorWipe> with SingleTickerProviderStateMixin {
-//   late AnimationController _controller;
-//   late Animation<Offset> _animation;
-//   bool _isWiped = false;
-//
-//   @override
-//   void initState() {
-//     super.initState();
-//     _controller = AnimationController(
-//       vsync: this,
-//       duration: Duration(seconds: 1),
-//     );
-//
-//     _animation = Tween<Offset>(
-//       begin: Offset(0.0, -1.0),
-//       end: Offset(0.0, 0.0),
-//     ).animate(_controller);
-//   }
-//
-//   void _onButtonPressed() {
-//     setState(() {
-//       _isWiped = !_isWiped;
-//       _isWiped ? _controller.forward() : _controller.reverse();
-//     });
-//   }
-//
-//   @override
-//   void dispose() {
-//     _controller.dispose();
-//     super.dispose();
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Column(
-//       mainAxisAlignment: MainAxisAlignment.center,
-//       children: [
-//         Stack(
-//           children: [
-//             Container(
-//               width: 200,
-//               height: 100,
-//               color: Colors.grey, // Background color
-//             ),
-//             SlideTransition(
-//               position: _animation,
-//               child: Container(
-//                 width: 200,
-//                 height: 100,
-//                 color: Colors.blue, // Wipe color
-//               ),
-//             ),
-//           ],
-//         ),
-//         SizedBox(height: 20),
-//         ElevatedButton(
-//           onPressed: _onButtonPressed,
-//           child: Text('Animate Color Wipe'),
-//         ),
-//       ],
-//     );
-//   }
-// }
