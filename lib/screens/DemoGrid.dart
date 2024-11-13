@@ -85,6 +85,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
   bool isGameOver = false;
   late LinearTimerController timerController = LinearTimerController(this);
 
+  int gridClickCount = 0;
   bool isTimerEnabled = true;
   int timerValue = 30;
   String player1 = 'Player 1';
@@ -93,6 +94,11 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
   final TextEditingController player1Controller = TextEditingController();
   final TextEditingController player2Controller = TextEditingController();
   Key key = UniqueKey();
+  List winnerGrid =[];
+  bool isShow = false;
+  // List<dynamic> history = [];
+  // bool showHistory = false;
+  // int indOfHistory = 0;
 
   Future<void> _loadPreferences() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -128,6 +134,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
             grid[i][j] == grid[i][j + 3] &&
             grid[i][j] != 0
         ) {
+          winnerGrid = [[i,j],[i,j+1],[i,j+2],[i,j+3]];
           return true;
         }
       }
@@ -140,6 +147,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
             grid[i][j] == grid[i + 2][j] &&
             grid[i][j] == grid[i + 3][j] &&
             grid[i][j] != 0) {
+          winnerGrid = [[i,j],[i+1,j],[i+2,j],[i+3,j]];
           return true;
         }
       }
@@ -152,6 +160,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
             grid[i][j] == grid[i + 2][j + 2] &&
             grid[i][j] == grid[i + 3][j + 3] &&
             grid[i][j] != 0) {
+          winnerGrid = [[i,j],[i+1,j+1],[i+2,j+2],[i+3,j+3]];
           return true;
         }
       }
@@ -164,6 +173,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
             grid[i][j] == grid[i - 2][j + 2] &&
             grid[i][j] == grid[i - 3][j + 3] &&
             grid[i][j] != 0) {
+          winnerGrid = [[i,j],[i-1,j+1],[i-2,j+2],[i-3,j+3]];
           return true;
         }
       }
@@ -172,13 +182,22 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
     return false;
   }
 
-  void _showDialog(bool isTimeout){
+  Future<void> _showDialog(bool isTimeout, bool isDraw)  async {
+    if(!isShow) {
+      setState(() {
+        isShow = true;
+        timerController.stop();
+      });
+    }
+    await Future.delayed(Duration(seconds: 5));
     timerController.stop();
     showDialog(
         context: context,
         builder: (context)=>AlertDialog(
           backgroundColor: Colors.brown[50],
-          title: Text('${isFirst ? player2 : player1} Won ${isTimeout? 'by Timeout' : ''}',
+          title: isDraw ? Text('Match has been DRAW because there is no moves',
+            style: GoogleFonts.itim(fontWeight: FontWeight.bold),):
+          Text('${isFirst ? player2 : player1} Won ${isTimeout? 'by Timeout' : ''}',
             style: GoogleFonts.itim(fontWeight: FontWeight.bold),),
           content: Text('Do you really want Restart the GAME',
           style: GoogleFonts.itim(fontSize: 20),),
@@ -193,10 +212,13 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                 flag = false;
                 Navigator.of(context).pop();
                 gameStarted = false;
+                gridClickCount = 0;
                 timerController.reset();
                 setState(() {
                   timerController.stop();
                   isGameOver = false;
+                  winnerGrid =[];
+                  isShow = true;
                 });
               },
               child: Text('Yes'),
@@ -218,13 +240,18 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
     player1Controller.text = player1.toString();
     player2Controller.text = player2.toString();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (hasFourInARow(grid)) {
         isGameOver = true;
-        _showDialog(false);
+        // _showDialog(false,false);
+        _showDialog(false,false);
+        // showHistory = true;
       }
-      else{
-        // timerController.start();
+
+      if(gridClickCount == 16){
+        isGameOver=true;
+        gridClickCount = 0;
+        _showDialog(false,true);
       }
     });
     // timerController.start();
@@ -287,7 +314,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
             onTimerEnd: () {
               setState(() {
                 isGameOver = true;
-                _showDialog(true);
+                _showDialog(true,false);
               });
             },
             minHeight: 8,
@@ -298,66 +325,90 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
 
         SizedBox(height: 40,),
 
+
         Visibility(
-          visible: gameStarted,
-          replacement: Container(
-            height: 450,
-            width: MediaQuery.sizeOf(context).width,
-            child: Center(
-              child: MaterialButton(
-                onPressed: (){
-                  setState(() {
-                    gameStarted = true;
-                    timerController.start();
-                  });
-                },
-                child: Container(
-                  alignment: Alignment.center,
-                  height: 70,
-                  width: MediaQuery.sizeOf(context).width,
-                  child: Text('Start Game' , style: GoogleFonts.permanentMarker(
-                    color: Colors.white,
-                    fontSize: 25
-                  ),),
-                  decoration: BoxDecoration(
-                  // color: Colors.blueGrey,
-                    borderRadius: BorderRadius.circular(20),
-                    image: DecorationImage(
-                      image: AssetImage("assets/bgButton.jpg"), // Background image
-                      fit: BoxFit.fill, // Cover the entire screen
+            visible: gameStarted,
+            replacement: Container(
+              height: 450,
+              width: MediaQuery.sizeOf(context).width,
+              child: Center(
+                child: MaterialButton(
+                  onPressed: (){
+                    setState(() {
+                      gameStarted = true;
+                      timerController.start();
+                    });
+                  },
+                  child: Container(
+                    alignment: Alignment.center,
+                    height: 70,
+                    width: MediaQuery.sizeOf(context).width,
+                    child: Text('Start Game' , style: GoogleFonts.permanentMarker(
+                        color: Colors.white,
+                        fontSize: 25
+                    ),),
+                    decoration: BoxDecoration(
+                      // color: Colors.blueGrey,
+                      borderRadius: BorderRadius.circular(20),
+                      image: DecorationImage(
+                        image: AssetImage("assets/bgButton.jpg"), // Background image
+                        fit: BoxFit.fill, // Cover the entire screen
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-          child: Container(
-            height: 450,
-            child: isLoading
-                ? Container(
+            child: Container(
               height: 450,
-              child: Stack(
-                children: [
-                  marbleGrid(),
-                  Opacity(
-                    opacity: 0.1,
-                    child: Container(
-                      width: MediaQuery.sizeOf(context).width,
-                      height: 400,
-                      child: Image.asset(
-                        'assets/rotate.gif', // Replace with your PNG asset
-                        fit: BoxFit.cover,
+              child: isLoading
+                  ? Container(
+                height: 450,
+                child: Stack(
+                  children: [
+                    marbleGrid(),
+                    Opacity(
+                      opacity: 0.1,
+                      child: Container(
+                        width: MediaQuery.sizeOf(context).width,
+                        height: 400,
+                        child: Image.asset(
+                          'assets/rotate.gif', // Replace with your PNG asset
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
-                  ),
 
-                ],
-              ),
-            )
-                :marbleGrid(),
+                  ],
+                ),
+              )
+                  :marbleGrid(),
+            ),
           ),
-        ),
 
+
+
+        // SizedBox(height: 20,),
+
+        // Row(
+        //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        //   children: [
+        //     IconButton(onPressed: (){
+        //       setState(() {
+        //         if(indOfHistory > 0){
+        //           indOfHistory-=1;
+        //         }
+        //       });
+        //     }, icon: Icon(Icons.arrow_back_sharp)),
+        //     IconButton(onPressed: (){
+        //       setState(() {
+        //         if(indOfHistory < history.length-1){
+        //           indOfHistory+=1;
+        //         }
+        //       });
+        //     }, icon: Icon(Icons.arrow_forward_sharp)),
+        //   ],
+        // ) ,
 
         ElevatedButton(
           style: ButtonStyle(
@@ -375,7 +426,10 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
               timerController.reset();
               timerController.stop();
               isGameOver = false;
+              winnerGrid =[];
+              isShow = true;
               gameStarted = false;
+              gridClickCount = 0;
             });
           },
           child: Text('Reset Game', style: GoogleFonts.inter(color: Colors.white),),
@@ -430,7 +484,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                       onTimerEnd: () {
                         setState(() {
                           isGameOver = true;
-                          _showDialog(true);
+                          _showDialog(true,false);
                         });
                       },
                       minHeight: 8,
@@ -458,7 +512,10 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                     timerController.reset();
                     timerController.stop();
                     isGameOver = false;
+                    winnerGrid =[];
+                    isShow = true;
                     gameStarted = false;
+                    gridClickCount = 0;
                   });
                 },
                 child: Text('Reset Game', style: GoogleFonts.inter(color: Colors.white),),
@@ -744,9 +801,12 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                             isFirst = true;
                             flag = false;
                             gameStarted = false;
+                            gridClickCount = 0;
                             timerController.reset();
                             timerController.stop();
                             isGameOver = false;
+                            winnerGrid =[];
+                            isShow = true;
                           });
                         });
                         Navigator.pop(context);
@@ -809,6 +869,16 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
           int row = index ~/ 4;
           int col = index % 4;
 
+          // print(isGameOver);
+          print(winnerGrid.contains([row,col]));
+          // print(winnerGrid);
+
+          bool containsTarget = false;
+          if(winnerGrid.length > 0)
+           containsTarget = winnerGrid.any((element) => (element[0]==row && element[1]==col));
+
+          print(containsTarget);
+
           return
             Card(
             // color: Colors.blue,
@@ -816,15 +886,20 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
             child: InkWell(
               onTap: ()async{
                 if(!isGameOver && grid[row][col]==0) {
+                  gridClickCount++;
                   grid[row][col] = isFirst ? 1 : 2;
                   timerController.stop();
 
+                  // history.add(grid);
                   isFirst = !isFirst;
                   flag = hasFourInARow(grid);
                   if (flag) {
-                    setState(() {});
-                    isGameOver = true;
-                    _showDialog(false);
+                    setState(() {
+                      isGameOver = true;
+                    });
+
+                    // await Future.delayed(Duration(seconds: 5));
+                    // _showDialog(false,false);
                   } else {
                     setState(() {});
                     // isLoading = true;
@@ -838,15 +913,13 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                 }
               },
               child: AnimatedContainer(
-                // color: grid[row][col] == 0 ?
-                // Colors.blue :
-                // grid[row][col] == 1
-                //     ? Colors.red : Colors.yellow,
                 alignment: Alignment.centerRight,
                 duration: Duration(milliseconds: 1000),
                 curve: Curves.linearToEaseOut,
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                color: isGameOver ? containsTarget ? Colors.green : Colors.blue[50]
+                    : Colors.blue[50],
+                  // color: Colors.blue[50],
                   image:  grid[row][col] == 0 ? null:
                   DecorationImage(
                     image: grid[row][col] == 1
