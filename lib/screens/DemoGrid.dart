@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:linear_timer/linear_timer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 class GridRotation extends StatefulWidget {
@@ -11,6 +13,13 @@ class GridRotation extends StatefulWidget {
 }
 
 class _GridRotationState extends State<GridRotation> with TickerProviderStateMixin{
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _loadPreferences();
+  }
+
   // Initialize the grid with values
   List<List<int>> grid = List.generate(
     4, (i) => List.generate(4, (j) => 0),
@@ -84,6 +93,29 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
   final TextEditingController player1Controller = TextEditingController();
   final TextEditingController player2Controller = TextEditingController();
   Key key = UniqueKey();
+
+  Future<void> _loadPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      // Check if preferences exist, otherwise set default values
+      timerValue = prefs.getInt('userPreferredTime') ?? 30;
+      player1 = prefs.getString('player1Name') ?? 'Player 1';
+      player2 = prefs.getString('player2Name') ?? 'Player 2';
+    });
+
+    // If keys don't exist in SharedPreferences, save the default values
+    if (!prefs.containsKey('userPreferredTime')) {
+      await prefs.setInt('userPreferredTime',30);
+    }
+    if (!prefs.containsKey('player1Name')) {
+      await prefs.setString('player1Name', player1);
+    }
+    if (!prefs.containsKey('player2Name')) {
+      await prefs.setString('player2Name', player2);
+    }
+  }
+
   bool hasFourInARow(List<List<int>> grid) {
     int rows = 4; // fixed 4x4 grid
     int cols = 4;
@@ -145,8 +177,11 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
     showDialog(
         context: context,
         builder: (context)=>AlertDialog(
-          title: Text('${isFirst ? player2 : player1} Won ${isTimeout? 'by Timeout' : ''}'),
-          content: Text('Do you really want Restart the GAME'),
+          backgroundColor: Colors.brown[50],
+          title: Text('${isFirst ? player2 : player1} Won ${isTimeout? 'by Timeout' : ''}',
+            style: GoogleFonts.itim(fontWeight: FontWeight.bold),),
+          content: Text('Do you really want Restart the GAME',
+          style: GoogleFonts.itim(fontSize: 20),),
           actions: [
             TextButton(
               onPressed: (){
@@ -183,29 +218,29 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
     player1Controller.text = player1.toString();
     player2Controller.text = player2.toString();
 
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   if (hasFourInARow(grid)) {
-    //     isGameOver = true;
-    //     _showDialog(false);
-    //   }
-    //   else{
-    //     // timerController.start();
-    //   }
-    // });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (hasFourInARow(grid)) {
+        isGameOver = true;
+        _showDialog(false);
+      }
+      else{
+        // timerController.start();
+      }
+    });
     // timerController.start();
     print('in build');
     return Scaffold(
       body: SafeArea(
-        child: Container(
-          height: MediaQuery.sizeOf(context).height,
-          width: MediaQuery.sizeOf(context).width,
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage("assets/back.jpg"), // Background image
-              fit: BoxFit.fill, // Cover the entire screen
+        child: SingleChildScrollView(
+          child: Container(
+            height: MediaQuery.sizeOf(context).height,
+            width: MediaQuery.sizeOf(context).width,
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage("assets/back.jpg"), // Background image
+                fit: BoxFit.fill, // Cover the entire screen
+              ),
             ),
-          ),
-          child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: orientation == Orientation.landscape ? tabView() : mobileView(),
@@ -221,198 +256,44 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-
-            IconButton(onPressed: (){
-              timerController.stop();
-                        final TextEditingController secondsController = TextEditingController();
-                        final TextEditingController player1Controller = TextEditingController();
-                        final TextEditingController player2Controller = TextEditingController();
-              showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context)=>AlertDialog(
-                    title: Text('Settings'),
-                    content: StatefulBuilder(
-                      builder: (BuildContext context, StateSetter  setState) {
-                        return Container(
-                          height: 220,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Timer'),
-                                  Switch(
-                                      value: isTimerEnabled,
-                                      onChanged: (s){
-                                        print(s);
-                                        setState(() {
-                                          isTimerEnabled = s;
-                                        });
-                                      })
-                                ],
-                              ),
-
-                              if(isTimerEnabled)...[
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Container(
-                                      height: 40,
-                                      width: 150,
-                                      child: TextField(
-                                        controller: secondsController,
-                                        keyboardType: TextInputType.number,
-                                        decoration: InputDecoration(
-                                          labelText: "Enter seconds",
-                                          border: OutlineInputBorder(),
-                                        ),
-                                        onChanged: (value) {
-                                          print(value);
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                SizedBox(height: 30,),
-                              ],
-
-                              Container(
-                                height: 40,
-                                // width: 150,
-                                child: TextField(
-                                  controller: player1Controller,
-                                  // keyboardType: TextInputType.number,
-                                  decoration: InputDecoration(
-                                    labelText: "Player 1 Name",
-                                    border: OutlineInputBorder(),
-                                  ),
-                                ),
-                              ),
-
-                              SizedBox(height: 20,),
-                              Container(
-                                height: 40,
-                                // width: 150,
-                                child: TextField(
-                                  controller: player2Controller,
-                                  // keyboardType: TextInputType.number,
-                                  decoration: InputDecoration(
-                                    labelText: "Player 2 Name",
-                                    border: OutlineInputBorder(),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: (){
-                          Navigator.pop(context);
-                        },
-                        child: Text('Cancel', style: TextStyle(color: Colors.red),),
-                      ),
-                      TextButton(
-                        onPressed: (){
-                          if(secondsController.text != '' && player1Controller.text !=''
-                              && player2Controller.text!='') {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-
-                              setState(() {
-                                timerValue = int.parse(
-                                    secondsController.text.toString());
-                                player1 = player1Controller.text;
-                                player2 = player2Controller.text;
-                                // gameStarted = false;
-                                key = UniqueKey();
-
-                                grid = List.generate(
-                                  4,
-                                      (i) => List.generate(4, (j) => 0),
-                                );
-                                isFirst = true;
-                                flag = false;
-                                gameStarted = false;
-                                timerController.reset();
-                                timerController.stop();
-                                isGameOver = false;
-                              });
-                            });
-                            Navigator.pop(context);
-                          }
-                          else{
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Please enter all the details'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-
-                            });
-                          }
-                        },
-                        style: ButtonStyle(
-                          backgroundColor: WidgetStateProperty.all(Colors.green[50])
-                        ),
-                        child: Text('Submit',style: TextStyle(color: Colors.green)),
-                      ),
-                    ],
-                  ));
-            },
-                icon: Icon(Icons.settings,size: 30,color: Colors.blue,)),
-
-            IconButton(onPressed: (){
-              showDialog(
-                  context: context,
-                  builder: (context)=>AlertDialog(
-                    title: Text(''),
-                    content: Text('Do you really want Restart the GAME'),
-                    actions: [
-                      TextButton(
-                        onPressed: (){
-                          Navigator.pop(context);
-                        },
-                        child: Text('Thanks!!'),
-                      ),
-                    ],
-                  ));
-            },
-                icon: Icon(Icons.help,size: 30,color: Colors.red,)),
-          ],
-        ),
+        topBar(),
 
         Text('Moving Marble Game',
-          style: TextStyle(fontSize: 25),),
+          style: GoogleFonts.lobster(
+              fontSize: 30,
+              fontWeight: FontWeight.bold,
+            color: Colors.brown[900]
+          ),),
 
         SizedBox(height: 20,),
 
         Text('${isFirst? player1 : player2}\'s Turn',
-          style: TextStyle(fontSize: 18),),
+          style: GoogleFonts.kodeMono(fontSize: 18),),
 
         SizedBox(height: 20,),
-        LinearTimer(
-          key: key,
-          duration: Duration(seconds: timerValue),
-          controller: timerController,
-          onTimerEnd: () {
-            setState(() {
-              isGameOver = true;
-              _showDialog(true);
-            });
-          },
-          minHeight: 8,
-          color: isLoading ? Colors.white : !isFirst ? Colors.red : Colors.yellow,
+
+        Visibility(
+          visible: isTimerEnabled,
+            child: Container(
+          height: 15,
+          decoration: BoxDecoration(
+              color: Colors.blue[900],
+              border: Border.all(color: Colors.black)
+          ),
+          child: LinearTimer(
+            key: key,
+            duration: Duration(seconds: timerValue),
+            controller: timerController,
+            onTimerEnd: () {
+              setState(() {
+                isGameOver = true;
+                _showDialog(true);
+              });
+            },
+            minHeight: 8,
+            color: isLoading ? Colors.white : !isFirst ? Colors.red : Colors.yellow,
+          ),
+        )
         ),
 
         SizedBox(height: 40,),
@@ -434,10 +315,17 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                   alignment: Alignment.center,
                   height: 70,
                   width: MediaQuery.sizeOf(context).width,
-                  child: Text('Start Game'),
+                  child: Text('Start Game' , style: GoogleFonts.permanentMarker(
+                    color: Colors.white,
+                    fontSize: 25
+                  ),),
                   decoration: BoxDecoration(
-                  color: Colors.blueGrey,
-                    borderRadius: BorderRadius.circular(20)
+                  // color: Colors.blueGrey,
+                    borderRadius: BorderRadius.circular(20),
+                    image: DecorationImage(
+                      image: AssetImage("assets/bgButton.jpg"), // Background image
+                      fit: BoxFit.fill, // Cover the entire screen
+                    ),
                   ),
                 ),
               ),
@@ -472,6 +360,9 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
 
 
         ElevatedButton(
+          style: ButtonStyle(
+            backgroundColor: WidgetStateProperty.all(Colors.brown)
+          ),
           onPressed: (){
             grid = List.generate(
               4,
@@ -487,7 +378,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
               gameStarted = false;
             });
           },
-          child: Text('Reset Game'),
+          child: Text('Reset Game', style: GoogleFonts.inter(color: Colors.white),),
         ),
         SizedBox(height: 20),
       ],
@@ -500,39 +391,61 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
       width:  MediaQuery.sizeOf(context).width,
       child: Row(
         children: [
+
           Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              topBar(),
+
+              SizedBox(height: 30,),
 
               Text('Moving Marble Game',
-                style: TextStyle(fontSize: 25),),
+                style: GoogleFonts.lobster(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown[900]
+                ),),
 
               SizedBox(height: 20,),
 
               Text('${isFirst? player1 : player2}\'s Turn',
-                style: TextStyle(fontSize: 18),),
+                style: GoogleFonts.kodeMono(fontSize: 18),),
 
               SizedBox(height: 20,),
-              Container(
-                width: MediaQuery.sizeOf(context).width * 0.4 ,
-                child: LinearTimer(
-                  duration: const Duration(seconds: 10),
-                  controller: timerController,
-                  onTimerEnd: () {
-                    setState(() {
-                      isGameOver = true;
-                      _showDialog(true);
-                    });
-                  },
-                  minHeight: 8,
-                  color: isLoading ? Colors.white : !isFirst ? Colors.red : Colors.yellow,
-                ),
+
+              Visibility(
+                  visible: isTimerEnabled,
+                  child: Container(
+                    height: 15,
+                    width: MediaQuery.sizeOf(context).width * 0.4 ,
+                    decoration: BoxDecoration(
+                        color: Colors.blue[900],
+                        border: Border.all(color: Colors.black)
+                    ),
+                    child: LinearTimer(
+                      key: key,
+                      duration: Duration(seconds: timerValue),
+                      controller: timerController,
+                      onTimerEnd: () {
+                        setState(() {
+                          isGameOver = true;
+                          _showDialog(true);
+                        });
+                      },
+                      minHeight: 8,
+                      color: isLoading ? Colors.white : !isFirst ? Colors.red : Colors.yellow,
+                    ),
+                  )
               ),
+
 
               SizedBox(height: 40,),
 
               ElevatedButton(
+                style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.all(Colors.brown)
+                ),
                 onPressed: (){
                   grid = List.generate(
                     4,
@@ -541,23 +454,24 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                   isFirst = true;
                   isLoading = false;
                   flag = false;
-                  gameStarted = false;
                   setState(() {
                     timerController.reset();
                     timerController.stop();
                     isGameOver = false;
+                    gameStarted = false;
                   });
                 },
-                child: Text('Reset Game'),
+                child: Text('Reset Game', style: GoogleFonts.inter(color: Colors.white),),
               ),
-              SizedBox(height: 20),
+              // SizedBox(height: 20),
             ],
           ),
 
           SizedBox(width: 20,),
           Visibility(
             visible: gameStarted,
-            replacement: Container(
+            replacement:
+            Container(
               height: 450,
               width: MediaQuery.sizeOf(context).width * 0.5,
               child: Center(
@@ -570,11 +484,28 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                   },
                   child: Container(
                     alignment: Alignment.center,
-                    height: 50,
+                    height: 70,
                     width: MediaQuery.sizeOf(context).width * 0.5,
-                    child: Text('Start Game'),
-                    color: Colors.red,
+                    child: Text('Start Game' , style: GoogleFonts.permanentMarker(
+                        color: Colors.white,
+                        fontSize: 25
+                    ),),
+                    decoration: BoxDecoration(
+                      // color: Colors.blueGrey,
+                      borderRadius: BorderRadius.circular(20),
+                      image: DecorationImage(
+                        image: AssetImage("assets/bgButton.jpg"), // Background image
+                        fit: BoxFit.fill, // Cover the entire screen
+                      ),
+                    ),
                   ),
+                  // Container(
+                  //   alignment: Alignment.center,
+                  //   height: 50,
+                  //   width: MediaQuery.sizeOf(context).width * 0.5,
+                  //   child: Text('Start Game'),
+                  //   color: Colors.red,
+                  // ),
                 ),
               ),
             ),
@@ -606,6 +537,243 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
           ),
         ],
       ),
+    );
+  }
+
+  topBar(){
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(onPressed: (){
+          showDialog(
+              context: context,
+              builder: (context)=>AlertDialog(
+                backgroundColor: Colors.brown[50],
+                title: Text('How to Play the Game',style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                content: SingleChildScrollView(
+                  child: RichText(
+                    text: TextSpan(
+                      style: TextStyle(color: Colors.black, fontSize: 16),
+                      children: [
+                        TextSpan(
+                          text: '1. Starting the Game:\n',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: '   • Decide which player will go first.\n',
+                        ),
+                        TextSpan(
+                          text: '   • The first player places one of their marbles on any empty cell within the 4x4 grid.\n\n',
+                        ),
+                        TextSpan(
+                          text: '2. Taking Turns:\n',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: '   • Players alternate turns, placing one marble on any empty cell each time.\n',
+                        ),
+                        TextSpan(
+                          text: '   • After each marble is placed, all marbles on the board move one cell counterclockwise:\n',
+                        ),
+                        TextSpan(
+                          text: '       - Marbles in each row shift one step left.\n',
+                        ),
+                        TextSpan(
+                          text: '       - Marbles in the leftmost cells move to the start of the row below (or above for the bottom row).\n\n',
+                        ),
+                        TextSpan(
+                          text: '3. Winning the Game:\n',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: '   • Align four of your own marbles in a straight line—horizontally, vertically, or diagonally.\n',
+                        ),
+                        TextSpan(
+                          text: '   • The first player to achieve this alignment wins the game.\n\n',
+                        ),
+                        TextSpan(
+                          text: '4. Ending the Game:\n',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: '   • If no player aligns four marbles consecutively and no more moves are possible, the game is a draw.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: (){
+                      Navigator.pop(context);
+                    },
+                    child: Text('Thanks!!'),
+                  ),
+                ],
+              ));
+        },
+            icon: Icon(Icons.help,size: 30,color: Colors.red,)),
+
+        IconButton(onPressed: (){
+          timerController.stop();
+          final TextEditingController secondsController = TextEditingController();
+          final TextEditingController player1Controller = TextEditingController();
+          final TextEditingController player2Controller = TextEditingController();
+
+          secondsController.text =timerValue.toString();
+          player1Controller.text = player1;
+          player2Controller.text = player2;
+          showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context)=>AlertDialog(
+                backgroundColor: Colors.brown[50],
+                title: Text('Settings',style: GoogleFonts.itim(fontWeight: FontWeight.bold),),
+                content: StatefulBuilder(
+                  builder: (BuildContext context, StateSetter  setState) {
+                    return Container(
+                      height: 220,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Timer',style: GoogleFonts.itim(fontSize: 18,fontWeight: FontWeight.w500),),
+                                Switch(
+                                    value: isTimerEnabled,
+                                    onChanged: (s){
+                                      print(s);
+                                      setState(() {
+                                        isTimerEnabled = s;
+                                      });
+                                    })
+                              ],
+                            ),
+                        
+                            if(isTimerEnabled)...[
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    height: 40,
+                                    width: 150,
+                                    child: TextField(
+                                      style: GoogleFonts.itim(),
+                                      controller: secondsController,
+                                      keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(
+                                        labelText: "Enter seconds",
+                                        border: OutlineInputBorder(),
+                                        labelStyle: GoogleFonts.itim()
+                                      ),
+                                      onChanged: (value) {
+                                        print(value);
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                        
+                              SizedBox(height: 30,),
+                            ],
+                        
+                            Container(
+                              height: 40,
+                              // width: 150,
+                              child: TextField(
+                                controller: player1Controller,
+                                style: GoogleFonts.itim(),
+                                decoration: InputDecoration(
+                                  labelText: "Player 1 Name",
+                                  border: OutlineInputBorder(),
+                                    labelStyle: GoogleFonts.itim()
+                                ),
+                              ),
+                            ),
+                        
+                            SizedBox(height: 20,),
+                            Container(
+                              height: 40,
+                              // width: 150,
+                              child: TextField(
+                                controller: player2Controller,
+                                style: GoogleFonts.itim(),
+                                decoration: InputDecoration(
+                                  labelText: "Player 2 Name",
+                                  border: OutlineInputBorder(),
+                                    labelStyle: GoogleFonts.itim()
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: (){
+                      Navigator.pop(context);
+                    },
+                    child: Text('Cancel', style: GoogleFonts.itim(color: Colors.red),),
+                  ),
+                  TextButton(
+                    onPressed: (){
+                      if(secondsController.text != '' && player1Controller.text !=''
+                          && player2Controller.text!='') {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+
+                          setState(() {
+                            timerValue = int.parse(
+                                secondsController.text.toString());
+                            player1 = player1Controller.text;
+                            player2 = player2Controller.text;
+
+                            _savePreferences(timerValue,player1,player2);
+                            // gameStarted = false;
+                            key = UniqueKey();
+
+                            grid = List.generate(
+                              4,
+                                  (i) => List.generate(4, (j) => 0),
+                            );
+                            isFirst = true;
+                            flag = false;
+                            gameStarted = false;
+                            timerController.reset();
+                            timerController.stop();
+                            isGameOver = false;
+                          });
+                        });
+                        Navigator.pop(context);
+                      }
+                      else{
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Please enter all the details'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+
+                        });
+                      }
+                    },
+                    style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.all(Colors.green[50])
+                    ),
+                    child: Text('Submit',style: GoogleFonts.itim(color: Colors.green,fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ));
+        },
+            icon: Icon(Icons.settings,size: 30,color: Colors.blue,)),
+
+      ],
     );
   }
 
@@ -716,4 +884,11 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
     });
   }
 
+
+  Future<void> _savePreferences(int time , String p1, String p2) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('userPreferredTime', time);
+    await prefs.setString('player1Name', p1);
+    await prefs.setString('player2Name', p2);
+  }
 }

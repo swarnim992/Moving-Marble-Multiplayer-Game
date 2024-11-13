@@ -32,6 +32,8 @@ dependencies:
     sdk: flutter
 
   linear_timer:
+  google_fonts:
+  shared_preferences:
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -67,6 +69,7 @@ flutter:
     - assets/player1.png
     - assets/player2.png
     - assets/empty.png
+    - assets/bgButton.jpg
 #     - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
