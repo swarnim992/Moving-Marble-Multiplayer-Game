@@ -4,9 +4,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:linear_timer/linear_timer.dart';
-import 'package:movingmarble/screens/GameHistory.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'GameHistory.dart';
 
 class GridRotation extends StatefulWidget {
   @override
@@ -76,7 +76,12 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
         }
         row++;
       }
+
     });
+
+    if(!history.contains(grid))
+      history.add([...grid.map((subList) => [...subList])]);
+      // history = [...history,grid];
   }
   bool isFirst = true;
   bool flag = false;
@@ -97,9 +102,10 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
   Key key = UniqueKey();
   List winnerGrid =[];
   bool isShow = false;
-  List<dynamic> history = [];
   bool showHistory = false;
   int indOfHistory = 0;
+  List<List<List<int>>> history = [];
+
 
   Future<void> _loadPreferences() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -193,7 +199,10 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
         timerController.stop();
       });
 
-      await Future.delayed(Duration(seconds: 5));
+      print('isTimeout');
+      print(isTimeout);
+      int sec = isTimeout ? 0 : 3;
+      await Future.delayed(Duration(seconds: sec));
       timerController.stop();
       showDialog(
           context: context,
@@ -222,27 +231,32 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                     timerController.stop();
                     isGameOver = false;
                     winnerGrid =[];
+                    history=[];
                     isShow = true;
                   });
                 },
-                child: Text('Yes'),
+                child: Text('Yes',style: TextStyle(fontSize: 20,color: Colors.green)),
               ),
               TextButton(
                 onPressed: (){
                   Navigator.pop(context);
                 },
-                child: Text('NO'),
+                child: Text('NO',style: TextStyle(fontSize: 16,color: Colors.red)),
               ),
 
-              TextButton(
-                onPressed: (){
-                  Navigator.of(context).push(
-                      MaterialPageRoute(builder:
-                          (context) => Gamehistory(history: history)
-                      ));
-                },
-                child: Text('NO'),
-              ),
+              if(!isTimeout)...[
+                TextButton(
+                  onPressed: (){
+                    // if(!history.contains(grid))
+                    //   history.add([...grid.map((subList) => [...subList])]);
+                    Navigator.of(context).push(
+                        MaterialPageRoute(builder:
+                            (context) => Gamehistory(history: history, player1: player1, player2: player2, winnerGrid: winnerGrid,)
+                        ));
+                  },
+                  child: Text('Replay',style: TextStyle(fontSize: 20,color: Colors.blue),),
+                ),
+              ],
             ],
           ));
     }
@@ -256,12 +270,15 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
     player1Controller.text = player1.toString();
     player2Controller.text = player2.toString();
 
+    print(history);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (hasFourInARow(grid)) {
         isGameOver = true;
         // _showDialog(false,false);
         // isShow=false;
         // if(isShow)
+        if(!history.contains(grid))
+          history.add([...grid.map((subList) => [...subList])]);
         _showDialog(false,false);
         // showHistory = true;
       }else{
@@ -276,6 +293,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
     });
     // timerController.start();
     // print('in build');
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -312,10 +330,10 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
             color: Colors.brown[900]
           ),),
 
-        SizedBox(height: 20,),
+        SizedBox(height: 30,),
 
         Text('${isFirst? player1 : player2}\'s Turn',
-          style: GoogleFonts.kodeMono(fontSize: 18),),
+          style: GoogleFonts.kodeMono(fontSize: 24,fontWeight: FontWeight.bold),),
 
         SizedBox(height: 20,),
 
@@ -448,6 +466,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
               isGameOver = false;
               winnerGrid =[];
               isShow = true;
+              history=[];
               gameStarted = false;
               gridClickCount = 0;
             });
@@ -533,6 +552,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                     timerController.stop();
                     isGameOver = false;
                     winnerGrid =[];
+                    history=[];
                     isShow = true;
                     gameStarted = false;
                     gridClickCount = 0;
@@ -826,6 +846,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                             timerController.stop();
                             isGameOver = false;
                             winnerGrid =[];
+                            history=[];
                             isShow = true;
                           });
                         });
@@ -911,6 +932,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                   timerController.stop();
 
                   // history.add(grid);
+                  // print(history);
                   // history+=(grid);
                   isFirst = !isFirst;
                   flag = hasFourInARow(grid);
@@ -926,7 +948,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                     // isLoading = true;
                     _showImageWithBlur();
                     timerController.stop();
-                    await Future.delayed(Duration(milliseconds: 1200));
+                    await Future.delayed(Duration(milliseconds: 1000));
                     rotateGrid();
                     timerController.reset();
                     timerController.start();
@@ -935,7 +957,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
               },
               child: AnimatedContainer(
                 alignment: Alignment.centerRight,
-                duration: Duration(milliseconds: 1000),
+                duration: Duration(milliseconds: 800),
                 curve: Curves.linearToEaseOut,
                 decoration: BoxDecoration(
                 color: isGameOver ? containsTarget ? Colors.green : Colors.blue[50]
@@ -971,7 +993,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
     });
 
     // Set a timer to hide the image after 2 seconds
-    Timer(Duration(milliseconds: 1200), () {
+    Timer(Duration(milliseconds: 1000), () {
       setState(() {
         isLoading = false;
       });

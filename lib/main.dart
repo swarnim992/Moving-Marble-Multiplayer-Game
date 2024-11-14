@@ -1,6 +1,5 @@
+import 'package:Moving_Marble/screens/DemoGrid.dart';
 import 'package:flutter/material.dart';
-import 'package:movingmarble/screens/DemoGrid.dart';
-import 'package:movingmarble/screens/Home.dart';
 
 void main() {
   runApp(const MyApp());

@@ -1,4 +1,4 @@
-name: movingmarble
+name: Moving_Marble
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -68,7 +68,6 @@ flutter:
     - assets/back.jpg
     - assets/player1.png
     - assets/player2.png
-    - assets/empty.png
     - assets/bgButton.jpg
 #     - images/a_dot_ham.jpeg
 

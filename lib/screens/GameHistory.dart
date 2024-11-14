@@ -5,7 +5,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 class Gamehistory extends StatefulWidget {
   final List<dynamic> history;
-  const Gamehistory({super.key, required this.history});
+  final String player1;
+  final String player2;
+  final List winnerGrid;
+  const Gamehistory({super.key, required this.history, required this.player1, required this.player2, required this.winnerGrid});
 
   @override
   State<Gamehistory> createState() => _GamehistoryState();
@@ -19,6 +22,9 @@ class _GamehistoryState extends State<Gamehistory> {
   void initState() {
     // TODO: implement initState
     super.initState();
+    if(widget.history[widget.history.length-1] == widget.history[widget.history.length-2]){
+      widget.history.removeLast();
+    }
     indOfHistory = widget.history.length-1;
   }
 
@@ -64,10 +70,10 @@ class _GamehistoryState extends State<Gamehistory> {
 
         SizedBox(height: 20,),
 
-        // Text('${isFirst? player1 : player2}\'s Turn',
-        //   style: GoogleFonts.kodeMono(fontSize: 18),),
-        //
-        // SizedBox(height: 20,),
+        Text('${indOfHistory%2==0 ? widget.player1 : widget.player2}\'s Turn',
+          style: GoogleFonts.kodeMono(fontSize: 18),),
+
+        SizedBox(height: 20,),
 
         SizedBox(height: 40,),
 
@@ -89,14 +95,17 @@ class _GamehistoryState extends State<Gamehistory> {
                   indOfHistory-=1;
                 }
               });
-            }, icon: Icon(Icons.arrow_back_sharp)),
+            }, icon: Icon(Icons.arrow_back_sharp,size: 40,),
+            // color: Colors.blue,
+            style: ButtonStyle(backgroundColor: WidgetStateProperty.all(Colors.black54)),),
             IconButton(onPressed: (){
               setState(() {
                 if(indOfHistory < widget.history.length-1){
                   indOfHistory+=1;
                 }
               });
-            }, icon: Icon(Icons.arrow_forward_sharp)),
+            }, icon: Icon(Icons.arrow_forward_sharp,size: 40,),
+                style: ButtonStyle(backgroundColor: WidgetStateProperty.all(Colors.black54))),
           ],
         ) ,
 
@@ -105,6 +114,7 @@ class _GamehistoryState extends State<Gamehistory> {
               backgroundColor: WidgetStateProperty.all(Colors.brown)
           ),
           onPressed: (){
+              Navigator.pop(context);
               Navigator.pop(context);
           },
           child: Text('Back', style: GoogleFonts.inter(color: Colors.white),),
@@ -115,7 +125,75 @@ class _GamehistoryState extends State<Gamehistory> {
   }
 
   tabView(){
-    return Container();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: MediaQuery.sizeOf(context).width * 0.4,
+          child: Column(
+            children: [
+              Text('Moving Marble Game',
+                style: GoogleFonts.lobster(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown[900]
+                ),),
+
+              SizedBox(height: 20,),
+
+              Text('${indOfHistory%2==0 ? widget.player1 : widget.player2}\'s Turn',
+                style: GoogleFonts.kodeMono(fontSize: 18),),
+
+              SizedBox(height: 20,),
+
+              SizedBox(height: 40,),
+
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(onPressed: (){
+                    setState(() {
+                      if(indOfHistory > 0){
+                        indOfHistory-=1;
+                      }
+                    });
+                  }, icon: Icon(Icons.arrow_back_sharp,size: 40,),
+                    // color: Colors.blue,
+                    style: ButtonStyle(backgroundColor: WidgetStateProperty.all(Colors.black54)),),
+                  IconButton(onPressed: (){
+                    setState(() {
+                      if(indOfHistory < widget.history.length-1){
+                        indOfHistory+=1;
+                      }
+                    });
+                  }, icon: Icon(Icons.arrow_forward_sharp,size: 40,),
+                      style: ButtonStyle(backgroundColor: WidgetStateProperty.all(Colors.black54))),
+                ],
+              ) ,
+
+              ElevatedButton(
+                style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.all(Colors.brown)
+                ),
+                onPressed: (){
+                  Navigator.pop(context);
+                },
+                child: Text('Back', style: GoogleFonts.inter(color: Colors.white),),
+              ),
+              SizedBox(height: 20),
+            ],
+          ),
+        ),
+
+
+        Container(
+          // height: 450,
+          child: marbleGrid(widget.history[indOfHistory]),
+        ),
+      ],
+    );
   }
 
   marbleGrid(List grid){
@@ -155,8 +233,8 @@ class _GamehistoryState extends State<Gamehistory> {
           // print(winnerGrid);
 
           bool containsTarget = false;
-          // if(winnerGrid.length > 0)
-          //   containsTarget = winnerGrid.any((element) => (element[0]==row && element[1]==col));
+          if(widget.winnerGrid.length > 0 && indOfHistory == widget.history.length-1)
+            containsTarget = widget.winnerGrid.any((element) => (element[0]==row && element[1]==col));
 
           // print(containsTarget);
 
@@ -167,10 +245,10 @@ class _GamehistoryState extends State<Gamehistory> {
               child: InkWell(
                 child: AnimatedContainer(
                   alignment: Alignment.centerRight,
-                  duration: Duration(milliseconds: 1000),
+                  duration: Duration(milliseconds: 800),
                   curve: Curves.linearToEaseOut,
                   decoration: BoxDecoration(
-                      color: indOfHistory == widget.history.length-1 ? Colors.green : Colors.blue[50],
+                      color: containsTarget ? Colors.green : Colors.blue[50],
                       // color: Colors.blue[50],
                       image:  grid[row][col] == 0 ? null:
                       DecorationImage(
