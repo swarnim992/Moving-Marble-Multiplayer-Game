@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:linear_timer/linear_timer.dart';
+import 'package:movingmarble/screens/GameHistory.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
@@ -96,9 +97,9 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
   Key key = UniqueKey();
   List winnerGrid =[];
   bool isShow = false;
-  // List<dynamic> history = [];
-  // bool showHistory = false;
-  // int indOfHistory = 0;
+  List<dynamic> history = [];
+  bool showHistory = false;
+  int indOfHistory = 0;
 
   Future<void> _loadPreferences() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -183,54 +184,69 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
   }
 
   Future<void> _showDialog(bool isTimeout, bool isDraw)  async {
+    timerController.stop();
+    print('isShow');
+    print(isShow);
     if(!isShow) {
       setState(() {
         isShow = true;
         timerController.stop();
       });
+
+      await Future.delayed(Duration(seconds: 5));
+      timerController.stop();
+      showDialog(
+          context: context,
+          builder: (context)=>AlertDialog(
+            backgroundColor: Colors.brown[50],
+            title: isDraw ? Text('Match has been DRAW because there is no moves',
+              style: GoogleFonts.itim(fontWeight: FontWeight.bold),):
+            Text('${isFirst ? player2 : player1} Won ${isTimeout? 'by Timeout' : ''}',
+              style: GoogleFonts.itim(fontWeight: FontWeight.bold),),
+            content: Text('Do you really want Restart the GAME',
+              style: GoogleFonts.itim(fontSize: 20),),
+            actions: [
+              TextButton(
+                onPressed: (){
+                  grid = List.generate(
+                    4,
+                        (i) => List.generate(4, (j) => 0),
+                  );
+                  isFirst = true;
+                  flag = false;
+                  Navigator.of(context).pop();
+                  gameStarted = false;
+                  gridClickCount = 0;
+                  timerController.reset();
+                  setState(() {
+                    timerController.stop();
+                    isGameOver = false;
+                    winnerGrid =[];
+                    isShow = true;
+                  });
+                },
+                child: Text('Yes'),
+              ),
+              TextButton(
+                onPressed: (){
+                  Navigator.pop(context);
+                },
+                child: Text('NO'),
+              ),
+
+              TextButton(
+                onPressed: (){
+                  Navigator.of(context).push(
+                      MaterialPageRoute(builder:
+                          (context) => Gamehistory(history: history)
+                      ));
+                },
+                child: Text('NO'),
+              ),
+            ],
+          ));
     }
-    await Future.delayed(Duration(seconds: 5));
-    timerController.stop();
-    showDialog(
-        context: context,
-        builder: (context)=>AlertDialog(
-          backgroundColor: Colors.brown[50],
-          title: isDraw ? Text('Match has been DRAW because there is no moves',
-            style: GoogleFonts.itim(fontWeight: FontWeight.bold),):
-          Text('${isFirst ? player2 : player1} Won ${isTimeout? 'by Timeout' : ''}',
-            style: GoogleFonts.itim(fontWeight: FontWeight.bold),),
-          content: Text('Do you really want Restart the GAME',
-          style: GoogleFonts.itim(fontSize: 20),),
-          actions: [
-            TextButton(
-              onPressed: (){
-                grid = List.generate(
-                  4,
-                      (i) => List.generate(4, (j) => 0),
-                );
-                isFirst = true;
-                flag = false;
-                Navigator.of(context).pop();
-                gameStarted = false;
-                gridClickCount = 0;
-                timerController.reset();
-                setState(() {
-                  timerController.stop();
-                  isGameOver = false;
-                  winnerGrid =[];
-                  isShow = true;
-                });
-              },
-              child: Text('Yes'),
-            ),
-            TextButton(
-              onPressed: (){
-                Navigator.pop(context);
-              },
-              child: Text('NO'),
-            ),
-          ],
-        ));
+
   }
 
   @override
@@ -244,8 +260,12 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
       if (hasFourInARow(grid)) {
         isGameOver = true;
         // _showDialog(false,false);
+        // isShow=false;
+        // if(isShow)
         _showDialog(false,false);
         // showHistory = true;
+      }else{
+        isShow = false;
       }
 
       if(gridClickCount == 16){
@@ -255,7 +275,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
       }
     });
     // timerController.start();
-    print('in build');
+    // print('in build');
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -870,14 +890,14 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
           int col = index % 4;
 
           // print(isGameOver);
-          print(winnerGrid.contains([row,col]));
+          // print(winnerGrid.contains([row,col]));
           // print(winnerGrid);
 
           bool containsTarget = false;
           if(winnerGrid.length > 0)
            containsTarget = winnerGrid.any((element) => (element[0]==row && element[1]==col));
 
-          print(containsTarget);
+          // print(containsTarget);
 
           return
             Card(
@@ -891,6 +911,7 @@ class _GridRotationState extends State<GridRotation> with TickerProviderStateMix
                   timerController.stop();
 
                   // history.add(grid);
+                  // history+=(grid);
                   isFirst = !isFirst;
                   flag = hasFourInARow(grid);
                   if (flag) {
